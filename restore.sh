@@ -85,7 +85,7 @@ else
       python3 -m venv .venv
     fi
     if ! .venv/bin/python3 -c "import openpyxl, pymssql" >/dev/null 2>&1; then
-      .venv/bin/pip install -q -r scripts/requirements.txt
+      .venv/bin/pip3 install -q -r scripts/requirements.txt
     fi
     .venv/bin/python3 scripts/load_excel_data.py --commit
     echo "Excel data load done."
