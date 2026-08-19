@@ -382,7 +382,7 @@ GO
 -- v2.0 anywhere. Real and load-bearing in dev, but this is a spec deviation
 -- to raise with the sponsor, not a routine DBA ticket.
 -- ---------------------------------------------------------------------------
-/*
+
 IF COL_LENGTH('dbo.SP0USERPORTAL', 'roles') IS NULL
 BEGIN
     ALTER TABLE dbo.SP0USERPORTAL ADD roles nvarchar(max) NULL;
@@ -400,7 +400,7 @@ BEGIN
     ALTER TABLE dbo.SP0USERPORTAL ADD sub nvarchar(255) NULL;
 END
 GO
-*/
+
 
 
 -- ---------------------------------------------------------------------------
@@ -410,13 +410,13 @@ GO
 -- be a second column for the same fact until the vendor-master write target
 -- is settled.
 -- ---------------------------------------------------------------------------
-/*
+
 IF COL_LENGTH('dbo.SP0VENDOR', 'PO_ATTENTION_TO') IS NULL
 BEGIN
     ALTER TABLE dbo.SP0VENDOR ADD PO_ATTENTION_TO nvarchar(255) NULL;
 END
 GO
-*/
+
 
 
 -- ---------------------------------------------------------------------------
@@ -425,13 +425,13 @@ GO
 -- column at all. Also: dev's own migrations 055 and 096 disagree on this
 -- column's nullability -- settle that too before running.
 -- ---------------------------------------------------------------------------
-/*
+
 IF COL_LENGTH('dbo.TB_R_QIT', 'IS_DELETED') IS NULL
 BEGIN
     ALTER TABLE dbo.TB_R_QIT ADD IS_DELETED int NOT NULL DEFAULT 0;
 END
 GO
-*/
+
 
 
 -- ---------------------------------------------------------------------------
@@ -442,13 +442,13 @@ GO
 -- is a usability gain over the old hardcoded one, but it needs TAM sign-off
 -- as an intentional deviation, not a silent add.
 -- ---------------------------------------------------------------------------
-/*
+
 IF COL_LENGTH('dbo.TB_R_PROBLEM_SHEET_SIGNER', 'EMAIL_SUBJECT') IS NULL
 BEGIN
     ALTER TABLE dbo.TB_R_PROBLEM_SHEET_SIGNER ADD EMAIL_SUBJECT nvarchar(255) NULL;
 END
 GO
-*/
+
 
 
 -- ---------------------------------------------------------------------------
@@ -473,7 +473,7 @@ GO
 -- confirmed"? If not, this can be derived from PQCFQT IS NOT NULL instead of
 -- persisted as its own column.
 -- ---------------------------------------------------------------------------
-/*
+
 IF COL_LENGTH('dbo.SP1POQ', 'PQTPOQ') IS NULL
 BEGIN
     ALTER TABLE dbo.SP1POQ ADD PQTPOQ int NULL;
@@ -491,13 +491,23 @@ BEGIN
     ALTER TABLE dbo.SP1POQ ADD PQCFFG bit NOT NULL DEFAULT 0;
 END
 GO
-*/
+
+IF COL_LENGTH('dbo.SP1POQ', 'WarningFlag') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP1POQ ADD WarningFlag nvarchar(1) NULL DEFAULT 'N';
+END
+GO
+
+IF COL_LENGTH('dbo.SP1POQ', 'REASON') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP1POQ ADD REASON nvarchar(500) NULL;
+END
+GO
+
 
 
 /* ============================================================================
    NOT INCLUDED -- confirmed real but outside DB_SP_SP (this file's scope):
-     - SP1POQ.REASON, SP1POQ.WarningFlag: FSD-cited, confirmed live, both
-       already covered above.
      - POQ Upload/Confirmation template gaps (POQ Campaign, Daily POQ Kanban,
        Forecast N+1/2/3 Special Order): see "poq excel empty.xlsx". POQ
        Campaign is now confirmed to map to DB_SP_PRO.dbo.POQ.CAMPAIGN, a
