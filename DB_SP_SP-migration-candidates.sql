@@ -370,6 +370,21 @@ GO
 
 
 -- ---------------------------------------------------------------------------
+-- SP0ROLE.DESCRIPTION (1 column)
+-- Optional "Role Description" field on Role Maintenance. Live in
+-- identity/src/roles/controllers/roles.js (sort key roleDescription, create
+-- write, update patch). History is contradictory (db_sp_sp/116 dropped it as
+-- dead, 117 re-added same day citing "read by Role Maintenance") -- 117 is
+-- the correct, current state; current code confirms it's live, not dead.
+-- ---------------------------------------------------------------------------
+IF COL_LENGTH('dbo.SP0ROLE', 'DESCRIPTION') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP0ROLE ADD DESCRIPTION nvarchar(500) NULL;
+END
+GO
+
+
+-- ---------------------------------------------------------------------------
 -- SP0USERPORTAL.Name (1 column)
 -- FSD 2.8.1: Login Maintenance shows Name and Username separately; table only
 -- had the overloaded UserName. Live in identity/src/users/controllers/users.js
