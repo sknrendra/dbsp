@@ -1,0 +1,42 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: dbsp-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+      - ./:/backup
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  dbgate:
+    image: dbgate/dbgate:latest
+    container_name: dbsp-dbgate
+    ports:
+      - "8085:3000"
+    environment:
+      CONNECTIONS: "con1"
+      LABEL_con1: "MSSQL UAT"
+      SERVER_con1: "mssql"
+      USER_con1: "sa"
+      PASSWORD_con1: "YourStrong!Passw0rd"
+      PORT_con1: "1433"
+      ENGINE_con1: "mssql@dbgate-plugin-mssql"
+    volumes:
+      - dbgate-data:/root/.dbgate
+    depends_on:
+      - mssql
+    restart: unless-stopped
+
+volumes:
+  mssql-data:
+  dbgate-data:
