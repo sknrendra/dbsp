@@ -4,7 +4,7 @@ services:
     container_name: dbsp-mssql
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
       MSSQL_PID: "Developer"
     ports:
       - "1433:1433"
@@ -28,7 +28,7 @@ services:
       LABEL_con1: "MSSQL UAT"
       SERVER_con1: "mssql"
       USER_con1: "sa"
-      PASSWORD_con1: "YourStrong!Passw0rd"
+      PASSWORD_con1: "${MSSQL_SA_PASSWORD}"
       PORT_con1: "1433"
       ENGINE_con1: "mssql@dbgate-plugin-mssql"
     volumes:

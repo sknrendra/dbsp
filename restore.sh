@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$SCRIPT_DIR/.env" ]]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
 BAK_FILE="${1:-uat_trim.bak}"
 DB_NAME="${2:-DB_SP_SP}"
 CONTAINER="dbsp-mssql"
-SA_PASSWORD="YourStrong!Passw0rd"
+SA_PASSWORD="${MSSQL_SA_PASSWORD:-YourStrong!Passw0rd}"
 BACKUP_IN_CONTAINER="/backup/$(basename "$BAK_FILE")"
 
 if [[ ! -f "$BAK_FILE" ]]; then
@@ -84,7 +91,7 @@ else
     if [[ ! -x ".venv/bin/python3" ]]; then
       python3 -m venv .venv
     fi
-    if ! .venv/bin/python3 -c "import openpyxl, pymssql" >/dev/null 2>&1; then
+    if ! .venv/bin/python3 -c "import openpyxl, pymssql, dotenv" >/dev/null 2>&1; then
       .venv/bin/pip3 install -q -r scripts/requirements.txt
     fi
     .venv/bin/python3 scripts/load_excel_data.py --commit

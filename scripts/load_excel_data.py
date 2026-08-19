@@ -8,8 +8,9 @@ Usage:
     python3 load_excel_data.py           # dry run, no writes
     python3 load_excel_data.py --commit  # actually insert
 
-Env vars (all optional, defaults match docker-compose.yml):
-    MSSQL_HOST, MSSQL_PORT, MSSQL_SA_PASSWORD
+Reads MSSQL_HOST / MSSQL_PORT / MSSQL_SA_PASSWORD from ../.env (same file
+docker-compose.yml reads), falling back to real env vars, falling back to
+defaults matching docker-compose.yml.
 """
 import os
 import sys
@@ -18,8 +19,10 @@ from pathlib import Path
 
 import openpyxl
 import pymssql
+from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(REPO_ROOT / ".env")
 
 HOST = os.environ.get("MSSQL_HOST", "localhost")
 PORT = int(os.environ.get("MSSQL_PORT", "1433"))

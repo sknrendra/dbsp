@@ -1,2 +1,4 @@
 uat_trim.bak
 *.xlsx
+.env
+.venv/
