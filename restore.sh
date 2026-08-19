@@ -19,6 +19,15 @@ fi
 
 SQLCMD="/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD -C"
 
+DB_EXISTS=$(docker exec "$CONTAINER" $SQLCMD -h -1 -W -Q \
+  "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name = N'$DB_NAME';" | tr -d '[:space:]')
+
+if [[ "$DB_EXISTS" != "0" && "${FORCE_RESTORE:-0}" != "1" ]]; then
+  echo "ERROR: database [$DB_NAME] already exists. Refusing to REPLACE it and wipe existing data." >&2
+  echo "Re-run with FORCE_RESTORE=1 ./restore.sh ... to override." >&2
+  exit 1
+fi
+
 echo "Reading file list from $BACKUP_IN_CONTAINER ..."
 FILELIST=$(docker exec "$CONTAINER" $SQLCMD -h -1 -W -Q \
   "SET NOCOUNT ON; RESTORE FILELISTONLY FROM DISK = N'$BACKUP_IN_CONTAINER';")
@@ -55,3 +64,28 @@ for SCRIPT in "DB_SP_SP-migration-candidates.sql" "new_tables.sql" "surrounding-
   docker exec "$CONTAINER" $SQLCMD -b -d "$DB_NAME" -i "/backup/$SCRIPT"
   echo "Done: $SCRIPT"
 done
+
+EXCEL_FILES=("DB_SP_INF.xlsx" "DB_SP_INF  II.xlsx" "TB_M_USER_PROC_ID.xlsx")
+MISSING_EXCEL=0
+for f in "${EXCEL_FILES[@]}"; do
+  [[ -f "$f" ]] || MISSING_EXCEL=1
+done
+
+if [[ "$MISSING_EXCEL" -eq 1 ]]; then
+  echo "Skipping Excel data load: one or more of ${EXCEL_FILES[*]} not found in $(pwd)."
+else
+  EXISTING_ROWS=$(docker exec "$CONTAINER" $SQLCMD -h -1 -W -d "$DB_NAME" -Q \
+    "SET NOCOUNT ON; SELECT COUNT(*) FROM dbo.TB_M_USER_PROC_ID;" | tr -d '[:space:]')
+
+  if [[ "$EXISTING_ROWS" != "0" ]]; then
+    echo "Skipping Excel data load: dbo.TB_M_USER_PROC_ID already has $EXISTING_ROWS rows."
+  else
+    echo "Loading Excel data ..."
+    if [[ ! -x ".venv/bin/python3" ]]; then
+      python3 -m venv .venv
+      .venv/bin/pip install -q -r scripts/requirements.txt
+    fi
+    .venv/bin/python3 scripts/load_excel_data.py --commit
+    echo "Excel data load done."
+  fi
+fi
