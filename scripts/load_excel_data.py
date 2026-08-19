@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Loads DB_SP_INF.xlsx / "DB_SP_INF  II.xlsx" into DB_SP_INF, and
-TB_M_USER_PROC_ID.xlsx into DB_SP_SP.dbo.TB_M_USER_PROC_ID.
+Loads plain 1:1 sheet-to-table excel data into their target databases, plus
+TB_M_USER_PROC_ID.xlsx into DB_SP_SP.dbo.TB_M_USER_PROC_ID (special-cased:
+identity preserved, audit columns synthesized).
 
 Usage:
     pip install -r requirements.txt
@@ -15,6 +16,7 @@ defaults matching docker-compose.yml.
 import os
 import sys
 import datetime
+from collections import defaultdict
 from pathlib import Path
 
 import openpyxl
@@ -37,8 +39,10 @@ DRY_RUN = "--commit" not in sys.argv
 DATETIME_TYPES = {"datetime", "datetime2", "smalldatetime", "date", "datetimeoffset"}
 TEXTUAL_TYPES = {"char", "varchar", "nchar", "nvarchar", "text", "ntext"}
 
-INF_FILES = {
-    "DB_SP_INF.xlsx": [
+# Plain 1:1 sheet-to-table loads: (db_name, excel_file, [sheet/table names]).
+# Sheet name must equal the target table name in every case here.
+JOBS = [
+    ("DB_SP_INF", "DB_SP_INF.xlsx", [
         "TB_I_H01_06_SUPP", "TB_I_B03_PO_FILE_DOMSUPP", "TB_I_B04_PO_FILE_DIRCVND",
         "TB_I_H01_03_PROC_BASIC", "TB_I_H01_02_PNO", "TB_I_H01_12_STORAGE",
         "TB_I_H01_24_PROC_DELV_CTRL", "TB_I_H01_40_KANBAN", "TB_I_H01_08_COST",
@@ -46,12 +50,14 @@ INF_FILES = {
         "TB_I_H02_59_DDD_INFO_SUM", "TB_I_H02_60_DDD_INFO_DTL", "TB_I_H02_64_BO_ETD_FILE",
         "TB_I_H01_21_CUSTOMER", "TB_I_H01_25_DESTINATION", "TB_I_H01_09_PROC_CTL_PO_CTL",
         "TB_I_H02_35_PNO_STK_DISTR", "TB_I_H02_01_STOCK_FILE", "TB_I_B12_ACCOUNT_PAYABLE",
-    ],
-    "DB_SP_INF  II.xlsx": [
+    ]),
+    ("DB_SP_INF", "DB_SP_INF  II.xlsx", [
         "TB_I_H02_04_RECV_UPD_FILE", "TB_I_H02_04_RECV_UPD_FILE_N",
         "TB_I_H02_04_RECV_UPD_FILE_CMPLT", "TB_I_H02_08_RCV_OPS_DTL", "TB_I_H02_08_RCV_OPS_DTL_M",
-    ],
-}
+    ]),
+    ("DB_SP_PRO", "DB_SP_PRO.xlsx", ["TB_R_ASN"]),
+    ("DB_SP_WRH", "DB_SP_WRH.xlsx", ["TB_M_PART_NO_ASSIGN", "TB_M_PART_SOURCING"]),
+]
 USER_PROC_ID_FILE = "TB_M_USER_PROC_ID.xlsx"
 
 
@@ -93,13 +99,24 @@ def convert_value(value, col_type, nullable):
     return value
 
 
-def load_inf_table(conn, table, file_path, stats):
+def table_row_count(conn, table):
+    cur = conn.cursor()
+    cur.execute(f"SELECT COUNT(*) FROM dbo.[{table}]")
+    return cur.fetchone()[0]
+
+
+def load_table(conn, db, table, file_path, stats):
+    existing = table_row_count(conn, table)
+    if existing:
+        print(f"  {db}.{table}: skipped, already has {existing} rows")
+        return
+
     header, data = read_sheet(file_path, table)
-    schema = get_schema(conn, "DB_SP_INF", table)
+    schema = get_schema(conn, db, table)
 
     missing = [h for h in header if h not in schema]
     if missing:
-        print(f"  ERROR {table}: columns in excel not found in DB: {missing}")
+        print(f"  ERROR {db}.{table}: columns in excel not found in DB: {missing}")
         stats["errors"] += 1
         return
 
@@ -119,7 +136,7 @@ def load_inf_table(conn, table, file_path, stats):
             converted.append(cv)
         rows_out.append(tuple(converted))
 
-    print(f"  {table}: {len(rows_out)} rows, null_violations={null_violations}")
+    print(f"  {db}.{table}: {len(rows_out)} rows, null_violations={null_violations}")
     stats["rows"] += len(rows_out)
     if null_violations:
         stats["errors"] += 1
@@ -129,10 +146,15 @@ def load_inf_table(conn, table, file_path, stats):
         cur = conn.cursor()
         cur.executemany(sql, rows_out)
         conn.commit()
-        print(f"    -> inserted {len(rows_out)} rows into DB_SP_INF.dbo.{table}")
+        print(f"    -> inserted {len(rows_out)} rows into {db}.dbo.{table}")
 
 
 def load_user_proc_id(conn):
+    existing = table_row_count(conn, "TB_M_USER_PROC_ID")
+    if existing:
+        print(f"  TB_M_USER_PROC_ID: skipped, already has {existing} rows")
+        return
+
     header, data = read_sheet(REPO_ROOT / USER_PROC_ID_FILE, "Sheet1")
     print(f"TB_M_USER_PROC_ID: header={header}, rows={len(data)}")
 
@@ -165,13 +187,17 @@ def main():
 
     stats = {"rows": 0, "errors": 0}
 
-    print("--- DB_SP_INF tables ---")
-    conn_inf = pymssql.connect(server=HOST, port=PORT, user="sa", password=SA_PASSWORD, database="DB_SP_INF", autocommit=False)
-    for file_name, tables in INF_FILES.items():
-        file_path = REPO_ROOT / file_name
+    by_db = defaultdict(list)
+    for db, file_name, tables in JOBS:
         for table in tables:
-            load_inf_table(conn_inf, table, file_path, stats)
-    conn_inf.close()
+            by_db[db].append((file_name, table))
+
+    for db, entries in by_db.items():
+        print(f"--- {db} ---")
+        conn = pymssql.connect(server=HOST, port=PORT, user="sa", password=SA_PASSWORD, database=db, autocommit=False)
+        for file_name, table in entries:
+            load_table(conn, db, table, REPO_ROOT / file_name, stats)
+        conn.close()
 
     print("--- DB_SP_SP.dbo.TB_M_USER_PROC_ID ---")
     conn_sp = pymssql.connect(server=HOST, port=PORT, user="sa", password=SA_PASSWORD, database="DB_SP_SP", autocommit=False)

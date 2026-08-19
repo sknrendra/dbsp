@@ -72,7 +72,7 @@ for SCRIPT in "DB_SP_SP-migration-candidates.sql" "new_tables.sql" "surrounding-
   echo "Done: $SCRIPT"
 done
 
-EXCEL_FILES=("DB_SP_INF.xlsx" "DB_SP_INF  II.xlsx" "TB_M_USER_PROC_ID.xlsx")
+EXCEL_FILES=("DB_SP_INF.xlsx" "DB_SP_INF  II.xlsx" "TB_M_USER_PROC_ID.xlsx" "DB_SP_PRO.xlsx" "DB_SP_WRH.xlsx")
 MISSING_EXCEL=0
 for f in "${EXCEL_FILES[@]}"; do
   [[ -f "$f" ]] || MISSING_EXCEL=1
