@@ -369,6 +369,22 @@ END
 GO
 
 
+-- ---------------------------------------------------------------------------
+-- SP0USERPORTAL.Name (1 column)
+-- FSD 2.8.1: Login Maintenance shows Name and Username separately; table only
+-- had the overloaded UserName. Live in identity/src/users/controllers/users.js
+-- (sort key, "Name or Email" search box, create-user write). Source:
+-- supplier-portal-be/shared/migrations/db_sp_sp/116-add-name-to-sp0userportal.js
+-- (baseline pair: db_sp_sp_baseline/178). No backfill here -- column added
+-- NULL, existing rows stay blank until app writes touch them.
+-- ---------------------------------------------------------------------------
+IF COL_LENGTH('dbo.SP0USERPORTAL', 'Name') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP0USERPORTAL ADD Name nvarchar(255) NULL;
+END
+GO
+
+
 /* ============================================================================
    SECTION 2 -- GATED, DOES NOT RUN BY DEFAULT
    Each block below is commented out. Uncomment only after the specific open
@@ -387,6 +403,17 @@ IF COL_LENGTH('dbo.SP0USERPORTAL', 'roles') IS NULL
 BEGIN
     ALTER TABLE dbo.SP0USERPORTAL ADD roles nvarchar(max) NULL;
 END
+GO
+
+-- Legacy single-role column (Role int) predates roles/multi-role RBAC and is
+-- unread by the app now, but backfill it from roles[0] so anything still
+-- looking at Role directly (reports, ad-hoc queries) isn't blank/stale.
+-- roles is a brand-new column, empty on every restored row; Role (legacy
+-- single-role FK) is the one with real data on this backup. Seed roles from
+-- Role, not the other way round.
+UPDATE dbo.SP0USERPORTAL
+SET roles = '[' + CAST(Role AS varchar(20)) + ']'
+WHERE Role IS NOT NULL AND roles IS NULL;
 GO
 
 IF COL_LENGTH('dbo.SP0USERPORTAL', 'iss') IS NULL
