@@ -46,7 +46,7 @@ WITH MOVE N'$DATA_LOGICAL' TO N'/var/opt/mssql/data/${DB_NAME}.mdf',
 
 echo "Restore done: [$DB_NAME]"
 
-for SCRIPT in "DB_SP_SP-migration-candidates.sql" "surrounding-databases.sql"; do
+for SCRIPT in "DB_SP_SP-migration-candidates.sql" "new_tables.sql" "surrounding-databases.sql"; do
   if [[ ! -f "$SCRIPT" ]]; then
     echo "ERROR: script not found: $SCRIPT" >&2
     exit 1
