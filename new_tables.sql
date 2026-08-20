@@ -159,6 +159,35 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('dbo.TB_M_GATE_BOOK', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TB_M_GATE_BOOK (
+    ID int IDENTITY(1,1) NOT NULL,
+    GATE_NO nvarchar(50) NOT NULL,
+    UPDATE_BY nvarchar(100) NULL,
+    UPDATE_DATE datetimeoffset NULL,
+    CREATED_BY nvarchar(100) NULL,
+    CREATED_DATE datetimeoffset NULL,
+    CONSTRAINT PK_TB_M_GATE_BOOK PRIMARY KEY (ID)
+    );
+END
+GO
+
+IF OBJECT_ID('dbo.TB_M_GATE_VENDOR', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TB_M_GATE_VENDOR (
+    ID int IDENTITY(1,1) NOT NULL,
+    GATE_ID int NOT NULL,
+    VENDOR_CODE nvarchar(100) NOT NULL,
+    CREATED_BY nvarchar(100) NULL,
+    CREATED_DATE datetimeoffset NULL,
+    UPDATE_BY nvarchar(100) NULL,
+    UPDATE_DATE datetimeoffset NULL,
+    CONSTRAINT PK_TB_M_GATE_VENDOR PRIMARY KEY (ID)
+    );
+END
+GO
+
 IF OBJECT_ID('dbo.TB_M_MODULE_CONFIG', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.TB_M_MODULE_CONFIG (
@@ -291,6 +320,23 @@ BEGIN
     createdAt datetimeoffset NOT NULL,
     updatedAt datetimeoffset NOT NULL,
     CONSTRAINT PK_TB_M_TENANT PRIMARY KEY (TenantId)
+    );
+END
+GO
+
+IF OBJECT_ID('dbo.TB_M_TRUCK_BOOKING', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TB_M_TRUCK_BOOKING (
+    ID int IDENTITY(1,1) NOT NULL,
+    GATE_NO nvarchar(50) NOT NULL,
+    TIME_SLOT nvarchar(25) NULL,
+    START_TIME_SLOT nvarchar(10) NOT NULL,
+    END_TIME_SLOT nvarchar(10) NOT NULL,
+    UPDATE_BY nvarchar(100) NULL,
+    UPDATE_DATE datetimeoffset NULL,
+    CREATED_BY nvarchar(100) NULL,
+    CREATED_DATE datetimeoffset NULL,
+    CONSTRAINT PK_TB_M_TRUCK_BOOKING PRIMARY KEY (ID)
     );
 END
 GO
@@ -501,6 +547,44 @@ BEGIN
     CREATED_BY nvarchar(100) NULL,
     CREATED_DATE datetime NOT NULL DEFAULT GETDATE(),
     CONSTRAINT PK_TB_R_PRINT_CASE_LABEL_HISTORY PRIMARY KEY (ID)
+    );
+END
+GO
+
+IF OBJECT_ID('dbo.TB_R_TRUCK_BOOK_TRANS', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TB_R_TRUCK_BOOK_TRANS (
+    Id char(36) NOT NULL,
+    GATE_NO nvarchar(20) NOT NULL,
+    TIME_SLOT nvarchar(50) NOT NULL,
+    START_TIME_SLOT nvarchar(20) NULL,
+    END_TIME_SLOT nvarchar(20) NULL,
+    DELIVERY_PLAN_DATE date NOT NULL,
+    COMPANY_CODE nvarchar(20) NULL,
+    BOOK_TYPE char(1) NULL,
+    AVAILABLE_FLAG nvarchar(10) NULL,
+    TRUCK_POLICE_NO nvarchar(20) NULL,
+    TRUCK_TYPE nvarchar(50) NULL,
+    DRIVER_NAME nvarchar(100) NULL,
+    DRIVER_LICENSE nvarchar(50) NULL,
+    LICENSE_EXPIRE_DATE date NULL,
+    SIO_TAM_NO nvarchar(50) NULL,
+    SIO_TAM_DATE date NULL,
+    SIO_GOVERNMENT_NO nvarchar(50) NULL,
+    ASN_NO nvarchar(50) NULL,
+    ACTUAL_ARRIVAL_DATE date NULL,
+    ACTUAL_ARRIVAL_TIME nvarchar(10) NULL,
+    ACCURACY_FLAG char(1) NULL,
+    START_EFF_DATE date NULL,
+    END_EFF_DATE date NULL,
+    FOLDING_QTY int NULL,
+    MESH_BOX_QTY int NULL,
+    OTHER_QTY int NULL,
+    CREATED_BY nvarchar(100) NULL,
+    CREATED_DATE datetimeoffset NULL,
+    UPDATE_BY nvarchar(100) NULL,
+    UPDATE_DATE datetimeoffset NULL,
+    CONSTRAINT PK_TB_R_TRUCK_BOOK_TRANS PRIMARY KEY (Id)
     );
 END
 GO
