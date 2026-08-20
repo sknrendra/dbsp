@@ -72,6 +72,14 @@ for SCRIPT in "DB_SP_SP-migration-candidates.sql" "new_tables.sql" "TB_M_FUNCTIO
   echo "Done: $SCRIPT"
 done
 
+# DB_SP_PRO-migration-candidates.sql targets a different database on the same
+# instance -- run it against DB_SP_PRO explicitly, not $DB_NAME.
+if [[ -f "DB_SP_PRO-migration-candidates.sql" ]]; then
+  echo "Running DB_SP_PRO-migration-candidates.sql ..."
+  docker exec "$CONTAINER" $SQLCMD -b -d "DB_SP_PRO" -i "/backup/DB_SP_PRO-migration-candidates.sql"
+  echo "Done: DB_SP_PRO-migration-candidates.sql"
+fi
+
 EXCEL_FILES=("DB_SP_INF.xlsx" "DB_SP_INF  II.xlsx" "TB_M_USER_PROC_ID.xlsx" "DB_SP_PRO.xlsx" "DB_SP_WRH.xlsx")
 MISSING_EXCEL=0
 for f in "${EXCEL_FILES[@]}"; do

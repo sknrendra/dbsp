@@ -40,10 +40,38 @@ GO
    ============================================================================ */
 
 -- ---------------------------------------------------------------------------
--- SP1ORDERSENDING (6 columns)
+-- SP1ORDERSENDING (9 columns)
 -- Source: spec workbook (B-POR-D03 B-POR-K04), SP1ORDERSENDING items 40-47,
 -- all marked N (new). See Migration Plan.xlsx > SP1ORDERSENDING.
+--
+-- CrossDock/DownloadFrequency/ReviseFlag are the 3 rows on that same sheet
+-- ("live in our DB") that never got the "CLEARED for migration" treatment the
+-- other 6 got -- same table, same sweep, just missed. Confirmed live via
+-- order/src/po/controllers/po.js's PO list query (MAX(ReviseFlag),
+-- MAX(CrossDock), MAX(DownloadFrequency)), which 500s on dbsp without them.
 -- ---------------------------------------------------------------------------
+IF COL_LENGTH('dbo.SP1ORDERSENDING', 'ReviseFlag') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP1ORDERSENDING ADD ReviseFlag nvarchar(10) NULL;
+END
+GO
+
+-- Sheet: "live in our DB as CrossDock, rename pending" (FSD wanted
+-- CrossDockFlag; that name was already claimed by the sibling table
+-- SP1ORDERSENDINGFAILED, so the model kept CrossDock -- see
+-- supplier-portal-be shared/models/db_sp_sp/sp1ordersending.js).
+IF COL_LENGTH('dbo.SP1ORDERSENDING', 'CrossDock') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP1ORDERSENDING ADD CrossDock nvarchar(10) NULL;
+END
+GO
+
+IF COL_LENGTH('dbo.SP1ORDERSENDING', 'DownloadFrequency') IS NULL
+BEGIN
+    ALTER TABLE dbo.SP1ORDERSENDING ADD DownloadFrequency int NOT NULL DEFAULT 0;
+END
+GO
+
 IF COL_LENGTH('dbo.SP1ORDERSENDING', 'DeliveryGroup') IS NULL
 BEGIN
     ALTER TABLE dbo.SP1ORDERSENDING ADD DeliveryGroup nvarchar(25) NULL;
