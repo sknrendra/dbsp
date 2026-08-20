@@ -233,3 +233,12 @@ IF NOT EXISTS (SELECT 1 FROM dbo.TB_M_FUNCTION WHERE Name = N'DirectDelivery')
 INSERT INTO dbo.TB_M_FUNCTION (id, Name, createdAt, updatedAt) VALUES
 ('68603CF0-7630-4085-BAF7-FEE879D42D3E', N'DirectDelivery', '2026-07-28 08:12:29.893', '2026-07-28 08:12:29.893');
 GO
+
+/* Not part of the original 44-row baseline snapshot -- added later by
+   supplier-portal-be/shared/migrations/db_sp_sp/119-seed-menu-child-functions.js
+   (never ported into db_sp_sp_baseline, so any DB seeded from this file alone
+   ends up missing the Dashboard menu's TB_M_FUNCTION row). */
+IF NOT EXISTS (SELECT 1 FROM dbo.TB_M_FUNCTION WHERE Name = N'Dashboard')
+INSERT INTO dbo.TB_M_FUNCTION (id, Name, createdAt, updatedAt) VALUES
+('2E75F723-D757-4091-867B-226B748BCC27', N'Dashboard', '2026-08-20 00:00:00.000', '2026-08-20 00:00:00.000');
+GO
