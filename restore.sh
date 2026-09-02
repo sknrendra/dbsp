@@ -72,13 +72,28 @@ for SCRIPT in "DB_SP_SP-migration-candidates.sql" "new_tables.sql" "TB_M_FUNCTIO
   echo "Done: $SCRIPT"
 done
 
-# DB_SP_PRO-migration-candidates.sql targets a different database on the same
-# instance -- run it against DB_SP_PRO explicitly, not $DB_NAME.
-if [[ -f "DB_SP_PRO-migration-candidates.sql" ]]; then
-  echo "Running DB_SP_PRO-migration-candidates.sql ..."
-  docker exec "$CONTAINER" $SQLCMD -b -d "DB_SP_PRO" -i "/backup/DB_SP_PRO-migration-candidates.sql"
-  echo "Done: DB_SP_PRO-migration-candidates.sql"
-fi
+# These target databases other than $DB_NAME on the same instance, so they run
+# against an explicit -d. Order matters only within a database, and each script
+# is idempotent, so re-running the whole block is safe.
+#   DB_SP_PRO: migration-candidates (column adds) then new_tables_pro (creates)
+#   DB_SP_INF: new_tables_inf (creates) -- the H02_04 GR Data Repair staging +
+#              history tables, the only portal-written tables in that database.
+# surrounding-databases.sql above creates DB_SP_PRO/INF/SUP/WRH themselves, so
+# it must have run first (it is last in the $DB_NAME loop).
+run_against() {
+  local db="$1" script="$2"
+  if [[ ! -f "$script" ]]; then
+    echo "Skipping $script (not found)."
+    return
+  fi
+  echo "Running $script against $db ..."
+  docker exec "$CONTAINER" $SQLCMD -b -d "$db" -i "/backup/$script"
+  echo "Done: $script"
+}
+
+run_against "DB_SP_PRO" "DB_SP_PRO-migration-candidates.sql"
+run_against "DB_SP_PRO" "new_tables_pro.sql"
+run_against "DB_SP_INF" "new_tables_inf.sql"
 
 EXCEL_FILES=("DB_SP_INF.xlsx" "DB_SP_INF  II.xlsx" "TB_M_USER_PROC_ID.xlsx" "DB_SP_PRO.xlsx" "DB_SP_WRH.xlsx")
 MISSING_EXCEL=0

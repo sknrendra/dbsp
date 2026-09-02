@@ -124,14 +124,14 @@ BEGIN
     FUNC_DESCRIPTION nvarchar(255) NULL,
     PLANT_CODE nvarchar(50) NOT NULL,
     EMAIL_TO nvarchar(500) NULL,
-    EMAIL_CC nvarchar(500) NOT NULL,
+    EMAIL_CC nvarchar(500) NULL,
     EMAIL_BCC nvarchar(500) NULL,
     EMAIL_SUBJECT nvarchar(500) NOT NULL,
     EMAIL_MESSAGE nvarchar(max) NOT NULL,
     CREATED_BY nvarchar(255) NULL,
     CHANGED_BY nvarchar(255) NULL,
-    CREATED_DT datetimeoffset NOT NULL,
-    CHANGED_DT datetimeoffset NOT NULL,
+    CREATED_DT datetimeoffset NULL,
+    CHANGED_DT datetimeoffset NULL,
     CONSTRAINT PK_TB_M_ETD_EMAIL_CONTENT PRIMARY KEY (ID)
     );
 END
@@ -604,6 +604,28 @@ BEGIN
     CreatedDate datetime NULL DEFAULT GETDATE(),
     ModifiedDate datetime NULL,
     CONSTRAINT PK_TB_R_WEEKLY_REPORT PRIMARY KEY (ID)
+    );
+END
+GO
+
+-- TB_R_PALLET_SUM lives here per FSD (DB_SP_SP.dbo.TB_R_PALLET_SUM -- see
+-- §2.4.2.2, §2.6.1.2, §2.6.4.2, §2.6.6.2, every occurrence). The BE originally
+-- created it under DB_SP_PRO instead (spec/code mismatch, not covered by
+-- Migration Plan.xlsx); repointed 2026-08-30 to match this DDL -- model moved
+-- to shared/models/db_sp_sp/tb_r_pallet_sum.js, db_sp_pro/006 reverted by
+-- db_sp_pro/055-drop-tb-r-pallet-sum.js, created for DB_SP_SP by
+-- db_sp_sp/138-create-tb-r-pallet-sum.js, and asnWrite.js's commitAsn now
+-- writes these rows in its DB_SP_SP transaction (alongside SP1ASN) instead of
+-- the DB_SP_PRO one it shared with TB_R_ASN before.
+IF OBJECT_ID('dbo.TB_R_PALLET_SUM', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.TB_R_PALLET_SUM (
+    id int IDENTITY(1,1) NOT NULL,
+    ASN_NO nvarchar(50) NOT NULL,
+    PALLET_TYPE nvarchar(50) NOT NULL,
+    PALLET_QTY int NULL,
+    [TRANSACTION] nvarchar(10) NULL,
+    CONSTRAINT PK_TB_R_PALLET_SUM PRIMARY KEY (id)
     );
 END
 GO

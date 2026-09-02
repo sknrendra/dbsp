@@ -291,15 +291,13 @@ BEGIN
 END
 GO
 
--- nvarchar(5) NOT NULL in dev's physical schema (same INFORMATION_SCHEMA vs
--- model discrepancy as the two flags above). DEFAULT '' as a placeholder --
--- confirm the real default with TAM (likely '1' or '3' per the FSD's
--- Forecast-N+3-mandatory flag values) before relying on it.
-IF COL_LENGTH('dbo.SP0VENDOR', 'POQN3Flag') IS NULL
-BEGIN
-    ALTER TABLE dbo.SP0VENDOR ADD POQN3Flag nvarchar(5) NOT NULL DEFAULT '';
-END
-GO
+-- POQN3Flag MOVED to DB_SP_SP_POQ_migrations.sql (2026-09-01).
+-- The "confirm the real default with TAM" question recorded here is answered:
+-- the column is nullable with NO default. NULL is a real value -- it is the
+-- least-demanding confirmation horizon, period N only -- so NOT NULL makes it
+-- unrepresentable, and defaulting to '3' silently put every new supplier on
+-- the strictest setting. Values are NULL / '1' / '2' / '3', cumulative,
+-- meaning confirm through N / N+1 / N+2 / N+3.
 
 IF COL_LENGTH('dbo.SP0VENDOR', 'PO_COMPANY_TO') IS NULL
 BEGIN
@@ -522,49 +520,34 @@ GO
 
 
 -- ---------------------------------------------------------------------------
--- SP1POQ.PQTPOQ / PQCFQT / PQCFFG -- FULL SCRUTINY DEFERRED (2026-08-17)
+-- SP1POQ -- RESOLVED 2026-09-01, mostly moved to DB_SP_SP_POQ_migrations.sql
 --
--- PQTPOQ ("Total POQ"): the one place this label appears in the legacy app
--- (PoqServices.cs:4053, POQ Confirmation Excel export) the cell is actually
--- populated with REVISED_POQ_1 -- a different figure entirely (maps to
--- PQREV1). Looks like a legacy mislabeling bug the FSD may have inherited.
--- Confirm with TAM what "Total POQ" is actually supposed to be before this
--- column's definition (or its very existence) is finalized.
+-- PQTPOQ ("Total POQ"): DROPPED, not migrated. The deferred question is
+-- closed -- Total POQ carries no business meaning. Nothing in the app reads
+-- it, and legacy's own "Total POQ" cell (PoqServices.cs:4053/:4218) is filled
+-- with REVISED_POQ_1, a figure the workbook already shows elsewhere.
 --
--- PQCFQT ("Confirmation Qty"): confirmed real and needed (FSD Table 12 #15,
--- and legacy persists it -- just on DB_SP_PRO.dbo.POQ.CONFIRMATION_QTY, not
--- SP1POQ). Putting it on SP1POQ is a deliberate re-platforming choice by the
--- dev app, not an error -- but flag it as such when this is finalized.
+-- PQCFQT ("Confirmation Qty"): DROPPED, not migrated. The concept is real
+-- (FSD Table 12 #15) but SP1POQ already had the right home for it. Legacy's
+-- own entity (TAMSupplier.Data/SP1POQ.cs) carries PQREV1-4, the supplier's
+-- REVISION of each PQORG1-4, one per period N..N+3. The app was repointed
+-- onto those; PQREV1 is the period-N confirmed quantity PQCFQT was standing
+-- in for. Nothing writes or reads PQCFQT any more.
 --
--- PQCFFG ("Confirmed" flag): no legacy precedent at all (no column, no
--- app-level IsConfirmed logic anywhere in supplier-portal-existing). Purely
--- a dev-side answer to the PQCFQT null-vs-zero ambiguity. Open question:
--- does the business need "confirmed with qty 0" distinguished from "not yet
--- confirmed"? If not, this can be derived from PQCFQT IS NOT NULL instead of
--- persisted as its own column.
+-- WarningFlag: MOVED to DB_SP_SP_POQ_migrations.sql and redefined as `bit`
+-- rather than nvarchar(1) 'Y'/'N'.
+--
+-- PQCFFG ("Confirmed" flag): STAYS HERE, unchanged. Still no legacy
+-- precedent, still a dev-side column, and the open question below still
+-- stands -- only its wording shifts, since the derivation it suggested would
+-- now read `PQREV1 IS NOT NULL` rather than `PQCFQT IS NOT NULL`. Does the
+-- business need "confirmed with qty 0" distinguished from "not yet
+-- confirmed"? If not, this can be derived instead of persisted.
 -- ---------------------------------------------------------------------------
-
-IF COL_LENGTH('dbo.SP1POQ', 'PQTPOQ') IS NULL
-BEGIN
-    ALTER TABLE dbo.SP1POQ ADD PQTPOQ int NULL;
-END
-GO
-
-IF COL_LENGTH('dbo.SP1POQ', 'PQCFQT') IS NULL
-BEGIN
-    ALTER TABLE dbo.SP1POQ ADD PQCFQT int NULL;
-END
-GO
 
 IF COL_LENGTH('dbo.SP1POQ', 'PQCFFG') IS NULL
 BEGIN
     ALTER TABLE dbo.SP1POQ ADD PQCFFG bit NOT NULL DEFAULT 0;
-END
-GO
-
-IF COL_LENGTH('dbo.SP1POQ', 'WarningFlag') IS NULL
-BEGIN
-    ALTER TABLE dbo.SP1POQ ADD WarningFlag nvarchar(1) NULL DEFAULT 'N';
 END
 GO
 
@@ -578,8 +561,14 @@ GO
 
 /* ============================================================================
    NOT INCLUDED -- confirmed real but outside DB_SP_SP (this file's scope):
-     - POQ Upload/Confirmation template gaps (POQ Campaign, Daily POQ Kanban,
-       Forecast N+1/2/3 Special Order): see "poq excel empty.xlsx". POQ
-       Campaign is now confirmed to map to DB_SP_PRO.dbo.POQ.CAMPAIGN, a
-       different database entirely -- not an ALTER TABLE against DB_SP_SP.
+     - Daily POQ Kanban: still collected by the POQ Upload template and still
+       persisted nowhere. See "poq excel empty.xlsx".
+
+   SUPERSEDED 2026-09-01 -- this entry used to read that POQ Campaign and the
+   Forecast N+1/2/3 Special Order columns map to DB_SP_PRO.dbo.POQ.CAMPAIGN,
+   "a different database entirely -- not an ALTER TABLE against DB_SP_SP".
+   That held while campaign was a single flat value for period N. It is now a
+   full four-period series with its own confirmations, rates and warning, and
+   it lives on SP1POQ: those four template columns are PQORGCMP1-4. See
+   DB_SP_SP_POQ_migrations.sql, Section 3.
    ============================================================================ */
