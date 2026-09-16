@@ -61,75 +61,9 @@ BEGIN
 END
 GO
 
--- Source: shared/migrations/db_sp_pro/034-create-tb-r-gr-approval.js, folded
--- with 036-add-remark-to-tb-r-gr-approval.js (REMARK) and
--- 037-add-judged-columns-to-tb-r-gr-approval.js (5-level JUDGED_BY/TIME
--- pairs). FSD §2.10.3 GR Data Repair -- Add/Edit target + approval chain.
-IF OBJECT_ID('dbo.TB_R_GR_APPROVAL', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.TB_R_GR_APPROVAL (
-    id int IDENTITY(1,1) NOT NULL,
-    GR_NO nvarchar(100) NOT NULL,
-    RECEIVING_DATE date NULL,
-    ASN_NO nvarchar(100) NULL,
-    PO_NO nvarchar(100) NULL,
-    IS_SEND int NULL DEFAULT 0,
-    PART_SOURCE int NULL,
-    SUPP_CODE nvarchar(50) NULL,
-    SUPP_NAME nvarchar(255) NULL,
-    SUPP_PIC nvarchar(255) NULL,
-    SUPP_INV_NO nvarchar(100) NULL,
-    RECEIVING_CASE_NO nvarchar(100) NULL,
-    PO_PNO nvarchar(100) NULL,
-    PO_DATE date NULL,
-    RECEIVED_QTY int NULL,
-    ADJ_DELIVERY_QTY int NULL,
-    RECEIVING_COST decimal(18,3) NULL,
-    ApprovalFlag nvarchar(5) NULL,
-    CreatedBy nvarchar(50) NULL,
-    CreatedDate datetimeoffset NOT NULL,
-    REMARK nvarchar(255) NULL,
-    JUDGED_BY_SH_SPLD nvarchar(50) NULL,
-    JUDGED_TIME_SH_SPLD datetimeoffset NULL,
-    JUDGED_BY_DPH_SPLD nvarchar(50) NULL,
-    JUDGED_TIME_DPH_SPLD datetimeoffset NULL,
-    JUDGED_BY_STAFF_FAD nvarchar(50) NULL,
-    JUDGED_TIME_STAFF_FAD datetimeoffset NULL,
-    JUDGED_BY_SH_FAD nvarchar(50) NULL,
-    JUDGED_TIME_SH_FAD datetimeoffset NULL,
-    JUDGED_BY_DPH_FAD nvarchar(50) NULL,
-    JUDGED_TIME_DPH_FAD datetimeoffset NULL,
-    CONSTRAINT PK_TB_R_GR_APPROVAL PRIMARY KEY (id)
-    );
-END
-GO
-
--- Source: shared/migrations/db_sp_pro/035-create-tb-r-gr-history.js
--- FSD §2.10.3 Table 198. Audit trail for TB_R_GR repairs; search grid's
--- Remark column sources from here, not from TB_R_GR_APPROVAL.
-IF OBJECT_ID('dbo.TB_R_GR_HISTORY', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.TB_R_GR_HISTORY (
-    id int IDENTITY(1,1) NOT NULL,
-    GR_NO nvarchar(100) NOT NULL,
-    RECEIVING_DATE date NULL,
-    ASN_NO nvarchar(100) NULL,
-    PO_NO nvarchar(100) NULL,
-    SUPP_CODE nvarchar(50) NULL,
-    SUPP_INV_NO nvarchar(100) NULL,
-    RECEIVING_CASE_NO nvarchar(100) NULL,
-    PO_PNO nvarchar(100) NULL,
-    PO_DATE date NULL,
-    RECEIVED_QTY int NULL,
-    ADJ_DELIVERY_QTY int NULL,
-    PART_SOURCE int NULL,
-    REMARK nvarchar(255) NULL,
-    CreatedBy nvarchar(50) NULL,
-    CreatedDate datetimeoffset NOT NULL,
-    CONSTRAINT PK_TB_R_GR_HISTORY PRIMARY KEY (id)
-    );
-END
-GO
+-- TB_R_GR_APPROVAL / TB_R_GR_HISTORY used to be here -- relocated to DB_SP_SP
+-- (writes to DB_SP_PRO are for staging from outside, not this app's own
+-- approval workflow). See DB_SP_SP-add-gr-repair-approval-history.sql.
 
 -- Source: shared/migrations/db_sp_pro/023-create-tb-r-po-ddd-n.js
 -- FSD §2.13.10 DDD Performance report source; also the Approve target for
