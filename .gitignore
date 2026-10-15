@@ -1,4 +1,6 @@
 uat_trim.bak
 *.xlsx
 .env
+.env.*
 .venv/
+.scripts/__pycache__/

@@ -1,0 +1,124 @@
+USE [DB_SP_INF]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_CONV_R_PO_ALL]    Script Date: 9/30/2026 5:37:56 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROCEDURE [dbo].[SP_CONV_R_PO_ALL]
+				 @SEQ bigint
+AS
+BEGIN
+	DECLARE @StartDates as DATETIME2
+	DECLARE @EndDates as DATETIME2
+	DECLARE @Errors as nvarchar(200)
+	BEGIN TRANSACTION
+	SET @StartDates = GETDATE()
+	BEGIN TRY	
+	SET NOCOUNT ON;	
+			
+	UPDATE C
+	SET C.PO_QTY = D.PO_QTY 
+	, C.DELIVERY_DATE = D.DELIVERY_DATE
+	, C.REMAIN_QTY = D.PO_QTY - c.ASN_QTY
+	FROM DB_SP_PRO.DBO.TB_R_PO_ALL as C
+	INNER JOIN
+	DB_SP_INF.DBO.TB_I_B03_PO_FILE_DOMSUPP as D
+	on C.PO_NO = D.PO_NO and C.PO_ITEM_NO = D.PO_ITEM_NO
+	WHERE D.SEQ = @SEQ;
+
+	DELETE E
+	FROM DB_SP_PRO.DBO.TB_R_PO_ALL E
+	INNER JOIN 
+	DB_SP_INF.DBO.TB_I_B03_PO_FILE_DOMSUPP as F
+	on E.PO_NO = F.PO_NO and E.PO_ITEM_NO = F.PO_ITEM_NO and E.PO_DATE != F.PO_DATE
+	WHERE F.SEQ = @SEQ
+
+	INSERT INTO DB_SP_PRO.DBO.TB_R_PO_ALL 
+	(DEPOT_CODE ,
+		SUPP_CODE ,
+		SUPP_NAME ,
+		FACTORY_CODE ,
+		PO_NO ,
+		PO_ITEM_NO ,
+		MAKER_CODE ,
+		PO_PNO ,
+		PART_NAME ,
+		SUPP_PNO ,
+		PO_QTY ,
+		PO_DATE ,
+		ASN_QTY,
+		REMAIN_QTY,
+		DELIVERY_DATE ,
+		PO_TRANS_CODE ,
+		ORD_TYPE_TO_SUPP ,
+		CROS_DOCK ,
+		PURCHASE_UNIT_PRICE ,
+		PURCHASE_PRICE
+)
+	SELECT
+		DEPOT_CODE ,
+		SUPP_CODE ,
+		SUPP_NAME ,
+		FACTORY_CODE ,
+		PO_NO ,
+		PO_ITEM_NO ,
+		MAKER_CODE ,
+		PO_PNO ,
+		PART_NAME ,
+		SUPP_PNO ,
+		PO_QTY ,
+		PO_DATE ,
+		0 ASN_QTY,
+		PO_QTY REMAIN_QTY,
+		DELIVERY_DATE ,
+		PO_TRANS_CODE ,
+		ORD_TYPE_TO_SUPP ,
+		CROS_DOCK ,
+		PURCHASE_UNIT_PRICE ,
+		PURCHASE_PRICE 
+	FROM DB_SP_INF.DBO.TB_I_B03_PO_FILE_DOMSUPP as a
+	where SEQ = @SEQ and NOT EXISTS (
+	SELECT PO_NO,PO_ITEM_NO FROM DB_SP_PRO.DBO.TB_R_PO_ALL WHERE PO_NO = a.PO_NO and PO_ITEM_NO = a.PO_ITEM_NO	
+	)
+
+	END TRY
+
+	BEGIN CATCH  
+    SELECT   
+        ERROR_NUMBER() AS ErrorNumber  
+        ,ERROR_SEVERITY() AS ErrorSeverity  
+        ,ERROR_STATE() AS ErrorState  
+        ,ERROR_PROCEDURE() AS ErrorProcedure  
+        ,ERROR_LINE() AS ErrorLine  
+        ,ERROR_MESSAGE() AS ErrorMessage; 
+		 
+  	SET @Errors  = ERROR_MESSAGE();
+
+    IF @@TRANCOUNT > 0  
+		SET @EndDates = GETDATE();
+        ROLLBACK TRANSACTION;
+		EXEC	[DB_SP_PRO].[dbo].[SP_CREATE_LOG]
+		@Name = N'SP_CONV_R_PO_ALL',
+		@Description = N'Convertion data From table TB_I_B03_PO_FILE_DOMSUPP  into TB_R_PO_ALL',
+		@Type = N'Conversion',
+		@Remark = @Errors,
+		@Result = N'Error',
+		@StartDate = @StartDates,
+		@EndDate = @EndDates,
+		@CreatedBy = N'SYSTEM'
+	END CATCH;
+
+	IF @@TRANCOUNT > 0  
+    COMMIT TRANSACTION;
+	SET @EndDates = GETDATE();
+	EXEC	[DB_SP_PRO].[dbo].[SP_CREATE_LOG]
+		@Name = N'SP_CONV_R_PO_ALL',
+		@Description = N'Convertion data From table TB_I_B03_PO_FILE_DOMSUPP  into TB_R_PO_ALL',
+		@Type = N'Conversion',
+		@Remark = NULL,
+		@Result = N'Success',
+		@StartDate = @StartDates,
+		@EndDate = @EndDates,
+		@CreatedBy = N'SYSTEM'
+END

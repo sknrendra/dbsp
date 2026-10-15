@@ -1,0 +1,1 @@
+SELECT top 1 * FROM sp1ordersending;

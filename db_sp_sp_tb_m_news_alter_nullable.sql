@@ -1,0 +1,2 @@
+alter table DB_SP_SP.dbo.TB_M_NEWS
+ALTER COLUMN PLANT_CODE nvarchar(255) NULL
